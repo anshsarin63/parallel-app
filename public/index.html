@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parallel — Meet People Moving in Your Direction</title>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;600;700&family=Syne:wght@400;600;700;800&family=Cabinet+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MATCH POPUP -->
+<div class="match-popup" id="match-popup">
+  <div class="match-popup-inner">
+    <div class="match-spark">✨</div>
+    <h2>It's a Match!</h2>
+    <p id="match-popup-sub">You and <strong id="match-name"></strong> are moving in the same direction.</p>
+    <div class="match-popup-avs">
+      <div class="mp-av">😊</div>
+      <div class="mp-av" id="match-popup-av">👩‍💻</div>
+    </div>
+    <div class="match-popup-btns">
+      <button class="mp-chat" onclick="openChatFromMatch()">Send Message</button>
+      <button class="mp-skip" onclick="closeMatch()">Keep Swiping</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT WINDOW -->
+<div id="chat-window">
+  <div class="cw-head">
+    <button class="cw-back" onclick="closeChat()">←</button>
+    <div class="cw-av" id="cw-avatar">👩‍💻</div>
+    <div class="cw-info" style="flex:1">
+      <h3 id="cw-name">Priya S.</h3>
+      <p>🟢 Active now · 92% compatible</p>
+    </div>
+    <button id="cw-report-btn" onclick="openReportFromChat()" style="background:rgba(154,136,120,0.1);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:0.72rem;color:var(--muted);cursor:pointer;font-family:inherit;transition:all 0.2s">🚩 Report</button>
+  </div>
+  <div class="cw-msgs" id="cw-msgs"></div>
+  <div class="cw-typing" id="cw-typing" style="display:none;padding:0 1.5rem;font-size:0.75rem;color:var(--muted);font-style:italic">typing...</div>
+  <div style="padding:0 1.5rem 0.5rem">
+    <div class="prompt-chips" id="prompt-chips"></div>
+  </div>
+  <div class="cw-input-row">
+    <input class="cw-input" id="cw-input" placeholder="Say something real..." onkeydown="if(event.key==='Enter')sendMsg()">
+    <button class="cw-send" onclick="sendMsg()">➤</button>
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="report-modal" id="report-modal">
+  <div class="report-sheet">
+    <h3>🚩 Report or Block</h3>
+    <p id="report-target-name">Report this person</p>
+    <div class="report-reasons" id="report-reasons">
+      <button class="report-reason" onclick="selectReason(this)">Inappropriate behaviour or messages</button>
+      <button class="report-reason" onclick="selectReason(this)">Fake profile or impersonation</button>
+      <button class="report-reason" onclick="selectReason(this)">Harassment or bullying</button>
+      <button class="report-reason" onclick="selectReason(this)">Spam or scam</button>
+      <button class="report-reason" onclick="selectReason(this)">Makes me uncomfortable</button>
+    </div>
+    <div class="report-btns">
+      <button class="report-cancel" onclick="closeReport()">Cancel</button>
+      <button class="report-submit" onclick="submitReport()">Submit & Block</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGOUT CONFIRMATION MODAL -->
+<div class="logout-modal" id="logout-modal">
+  <div class="logout-sheet">
+    <div class="logout-icon">🚪</div>
+    <h3>Log Out?</h3>
+    <p>Your session data will be cleared. You'll need to set up your profile again to continue.</p>
+    <div class="logout-btns">
+      <button class="logout-cancel" onclick="cancelLogout()">Stay</button>
+      <button class="logout-confirm" onclick="confirmLogout()">Log Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="login-modal" id="login-modal">
+  <div class="login-sheet">
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2.5rem;margin-bottom:0.5rem">👋</div>
+      <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:var(--text);margin:0">Welcome Back</h3>
+      <p style="font-size:0.82rem;color:var(--muted);margin-top:0.3rem">Log in with your email and password</p>
+    </div>
+    <div class="ob-field">
+      <div class="ob-label">YOUR EMAIL</div>
+      <input class="ob-input" id="login-email" type="email" placeholder="your@email.com">
+    </div>
+    <div class="ob-field">
+      <div class="ob-label">YOUR PASSWORD</div>
+      <input class="ob-input" id="login-password" type="password" placeholder="Enter your password" onkeydown="if(event.key==='Enter')submitLogin()">
+    </div>
+    <p id="login-error" style="color:#e05050;font-size:0.78rem;margin:0.5rem 0 0;display:none"></p>
+    <button class="ob-btn" onclick="submitLogin()" style="margin-top:1rem" id="login-submit-btn">Log In →</button>
+    <button class="btn-ghost" onclick="closeLogin()" style="width:100%;margin-top:0.6rem;padding:0.7rem">Cancel</button>
+  </div>
+</div>
+
+<!-- ONBOARDING -->
+<div id="ob-screen" class="hidden">
+  <!-- STEP 1: Basic Info -->
+  <div class="ob-step active" id="ob1">
+    <div class="ob-progress">
+      <div class="ob-dot done"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div>
+    </div>
+    <div class="ob-logo">PARA<span>LLEL</span></div>
+    <h2 class="ob-h">Welcome 👋</h2>
+    <p class="ob-sub">Let's build your real profile. Takes 2 minutes.</p>
+    <div class="ob-field">
+      <div class="ob-label">YOUR NAME</div>
+      <input class="ob-input" id="ob-name" type="text" placeholder="What do people call you?">
+    </div>
+    <div class="ob-field">
+      <div class="ob-label">YOUR EMAIL</div>
+      <input class="ob-input" id="ob-email" type="email" placeholder="your@email.com">
+    </div>
+    <div class="ob-field">
+      <div class="ob-label">CREATE A PASSWORD</div>
+      <input class="ob-input" id="ob-password" type="password" placeholder="At least 6 characters">
+    </div>
+    <button class="ob-btn" onclick="obNext(1)">Continue →</button>
+  </div>
+
+  <!-- STEP 2: Photo + Birthday + Gender -->
+  <div class="ob-step" id="ob2">
+    <div class="ob-progress">
+      <div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div>
+    </div>
+    <h2 class="ob-h">Your Profile Photo</h2>
+    <p class="ob-sub">A real photo builds trust. You can always change it later.</p>
+    <div class="photo-upload-area" id="photo-area" onclick="document.getElementById('photo-input').click()">
+      <img id="photo-preview" src="" alt="">
+      <div id="upload-placeholder">
+        <div class="upload-icon">📷</div>
+        <div class="upload-hint">Tap to add<br>your photo</div>
+      </div>
+    </div>
+    <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="previewPhoto(this)">
+    <div class="ob-field">
+      <div class="ob-label">DATE OF BIRTH</div>
+      <input class="ob-input" id="ob-dob" type="date" max="2006-12-31">
+    </div>
+    <div class="ob-field">
+      <div class="ob-label">GENDER</div>
+      <div class="gender-grid">
+        <button class="gender-chip" onclick="selectGender(this)">👨 Male</button>
+        <button class="gender-chip" onclick="selectGender(this)">👩 Female</button>
+        <button class="gender-chip" onclick="selectGender(this)">🌈 Other</button>
+      </div>
+    </div>
+    <button class="ob-btn" onclick="obNext(2)" style="margin-top:1.2rem">Continue →</button>
+  </div>
+
+  <!-- STEP 3: Life Stage + Location -->
+  <div class="ob-step" id="ob3">
+    <div class="ob-progress">
+      <div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div>
+    </div>
+    <h2 class="ob-h">Your Life Stage</h2>
+    <p class="ob-sub">This is the heart of Parallel. Who are you right now?</p>
+    <div class="chips" id="stage-chips">
+      <div class="chip" onclick="selectChip(this,'stage')">🎓 University Student</div>
+      <div class="chip" onclick="selectChip(this,'stage')">💼 Corporate Professional</div>
+    </div>
+    <div class="ob-field" style="margin-top:1.5rem">
+      <div class="ob-label">YOUR LOCATION</div>
+      <div id="location-detect" style="background:rgba(192,90,53,0.06);border:1px solid rgba(192,90,53,0.15);border-radius:14px;padding:1rem 1.2rem;text-align:center">
+        <div id="location-status" style="font-size:0.85rem;color:var(--muted);line-height:1.6">
+          <span id="location-spinner" style="display:inline-block;animation:spin 1s linear infinite">📍</span>
+          Detecting your location...
+        </div>
+        <div id="location-result" style="display:none;font-size:1rem;font-weight:600;color:var(--text)"></div>
+        <button id="location-retry-btn" onclick="detectLocation()" style="display:none;margin-top:0.6rem;background:var(--rust);color:#fff;border:none;border-radius:10px;padding:0.5rem 1.2rem;font-size:0.8rem;cursor:pointer;font-family:inherit">📍 Retry Location</button>
+      </div>
+      <input type="hidden" id="ob-city" value="">
+    </div>
+    <button class="ob-btn" onclick="obNext(3)">Continue →</button>
+  </div>
+
+  <!-- STEP 4: Interests -->
+  <div class="ob-step" id="ob4">
+    <div class="ob-progress">
+      <div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot"></div><div class="ob-dot"></div>
+    </div>
+    <h2 class="ob-h">Your Interests</h2>
+    <p class="ob-sub">Pick at least 2. This powers your matches.</p>
+    <div class="chips" id="interest-chips">
+      <div class="chip" onclick="selectChip(this,'interest')">🚀 Startups</div>
+      <div class="chip" onclick="selectChip(this,'interest')">💻 Tech</div>
+      <div class="chip" onclick="selectChip(this,'interest')">📚 Studying</div>
+      <div class="chip" onclick="selectChip(this,'interest')">☕ Café Hopping</div>
+      <div class="chip" onclick="selectChip(this,'interest')">✈️ Travel</div>
+      <div class="chip" onclick="selectChip(this,'interest')">🎨 Design</div>
+      <div class="chip" onclick="selectChip(this,'interest')">🏋️ Fitness</div>
+      <div class="chip" onclick="selectChip(this,'interest')">🎵 Music & Concerts</div>
+      <div class="chip" onclick="selectChip(this,'interest')">📈 Finance</div>
+      <div class="chip" onclick="selectChip(this,'interest')">🌿 Wellness</div>
+      <div class="chip" onclick="selectChip(this,'interest')">🎯 Goal Setting</div>
+      <div class="chip" onclick="selectChip(this,'interest')">🍕 Foodie</div>
+      <div class="chip" onclick="selectChip(this,'interest')">🏠 Looking for Roommate</div>
+      <div class="chip" onclick="selectChip(this,'interest')">🎭 Events & Festivals</div>
+    </div>
+    <button class="ob-btn" onclick="obNext(4)">Continue →</button>
+  </div>
+
+  <!-- STEP 5: Vibe + Bio -->
+  <div class="ob-step" id="ob5">
+    <div class="ob-progress">
+      <div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot"></div>
+    </div>
+    <h2 class="ob-h">Your Energy Style</h2>
+    <p class="ob-sub">This helps us match your social wavelength.</p>
+    <div class="chips" id="energy-chips">
+      <div class="chip" onclick="selectChip(this,'energy')">🌙 Introvert — Deep 1:1s</div>
+      <div class="chip" onclick="selectChip(this,'energy')">⚡ Extrovert — Love groups</div>
+      <div class="chip" onclick="selectChip(this,'energy')">🌓 Ambivert — Depends on mood</div>
+    </div>
+    <div class="ob-field" style="margin-top:1.5rem">
+      <div class="ob-label">ONE-LINE BIO</div>
+      <input class="ob-input" id="ob-bio" placeholder="e.g. DU final year, prepping for CAT, looking for study crew...">
+    </div>
+    <button class="ob-btn" onclick="obNext(5)">Continue →</button>
+  </div>
+
+  <!-- STEP 6: Done -->
+  <div class="ob-step" id="ob6">
+    <div class="ob-progress">
+      <div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div><div class="ob-dot done"></div>
+    </div>
+    <div style="text-align:center;padding:2rem 0">
+      <div id="ob-final-photo" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--rust),var(--gold));display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 1rem;box-shadow:0 6px 20px rgba(192,90,53,0.25)">😊</div>
+      <h2 class="ob-h" style="text-align:center">You're in, <span id="welcome-name" style="color:var(--gold)">friend</span>! 🎉</h2>
+      <p class="ob-sub" style="margin:0 auto 1rem;max-width:320px;text-align:center">Your circle is waiting. Discover people on the same wavelength in <span id="ob-final-city">your city</span>.</p>
+      <div style="background:rgba(192,90,53,0.06);border:1px solid rgba(192,90,53,0.15);border-radius:14px;padding:1rem;margin-bottom:1.5rem;font-size:0.78rem;color:var(--muted);line-height:1.6;text-align:left">
+        🛡️ <strong style="color:var(--text)">Your safety matters.</strong> Every profile is reviewed. Use the Report/Block button on any profile if something feels off. We take action within 24 hours.
+      </div>
+    </div>
+    <button class="ob-btn" onclick="launchApp()">Find My People 🔥</button>
+  </div>
+</div>
+
+<!-- LANDING PAGE -->
+<div id="landing" class="screen active">
+  <div class="land-bg"></div>
+  <div class="grain"></div>
+
+  <nav class="nav">
+    <div class="nav-logo">PARA<span>LLEL</span></div>
+    <div class="nav-right">
+      <button class="btn-ghost" onclick="showLanding()">Home</button>
+      <button class="btn-ghost" onclick="openLogin()">Log In</button>
+      <button class="btn-primary" onclick="startOnboarding()">Get Started Free</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-inner">
+      <div>
+        <div class="hero-tag">✦ Connection-First Platform</div>
+        <h1 class="hero-h1">Meet people moving in your <em>direction.</em></h1>
+        <p class="hero-sub">Parallel matches university students & corporate professionals based on life stage, shared interests, and real compatibility — not just photos. Find your actual tribe.</p>
+        <div class="hero-actions">
+          <button class="btn-primary" style="padding:0.9rem 2.2rem;font-size:1rem" onclick="startOnboarding()">Start Free — No Card Needed</button>
+          <button class="btn-ghost" onclick="startOnboarding()">See How It Works →</button>
+        </div>
+        <p class="hero-note">🔒 Free forever · ₹199/mo for Premium · Cancel anytime</p>
+        <div class="stats-row">
+          <div class="stat-item"><div class="stat-num">2K+</div><div class="stat-label">Waitlist Members</div></div>
+          <div class="stat-item"><div class="stat-num">92%</div><div class="stat-label">Avg Match Score</div></div>
+          <div class="stat-item"><div class="stat-num">8</div><div class="stat-label">Cities at Launch</div></div>
+        </div>
+      </div>
+
+      <!-- PHONE MOCK -->
+      <div class="hero-visual">
+        <div class="fbadge f1"><span class="fbadge-icon">✨</span><div><strong>92% Compatible</strong><span>Life stage matched</span></div></div>
+        <div class="fbadge f2"><span class="fbadge-icon">🤝</span><div><strong>New Match!</strong><span>Arjun connected with you</span></div></div>
+        <div class="phone-outer">
+          <div class="phone-inner">
+            <div class="pnotch"></div>
+            <div class="pstatus"><span>9:41 AM</span><span>⚡ 87%</span></div>
+            <div class="phead">PEOPLE GROWING YOUR WAY</div>
+            <div class="pcard">
+              <div class="pavatarwrap" id="demo-av">👩‍💻</div>
+              <div class="pname" id="demo-name">Priya S.</div>
+              <div class="pmeta" id="demo-meta">REMOTE PROFESSIONAL · DELHI · 27</div>
+              <div class="pbar">
+                <div class="pbar-row"><div class="pbar-label">LIFE STAGE</div><div class="pbar-score" id="demo-s1">85%</div></div>
+                <div class="pbar-fill" id="demo-f1" style="width:85%"></div>
+              </div>
+              <div class="pbar">
+                <div class="pbar-row"><div class="pbar-label">COMPATIBILITY</div><div class="pbar-score" id="demo-s2">92%</div></div>
+                <div class="pbar-fill" id="demo-f2" style="width:92%"></div>
+              </div>
+              <div class="ptags" id="demo-tags">
+                <span class="ptag">Startup Life</span><span class="ptag">Café Hopper</span><span class="ptag">Growth</span>
+              </div>
+            </div>
+            <div class="pactions">
+              <button class="pact skip">✕</button>
+              <button class="pact like" onclick="demoLike()">♡</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section class="section" style="background:var(--warm2)">
+    <div class="section-inner">
+      <p class="sec-tag">The Problem</p>
+      <h2 class="sec-h">You're connected to everyone.<br>Yet you feel <em>alone.</em></h2>
+      <div class="cards3">
+        <div class="problem-c">
+          <div class="prob-icon">🌐</div>
+          <h3>Shallow Social Media</h3>
+          <p>Hundreds of followers, zero real friends. Platforms optimised for engagement — not belonging.</p>
+        </div>
+        <div class="problem-c">
+          <div class="prob-icon">📍</div>
+          <h3>Life Stage Mismatch</h3>
+          <p>Your old circle isn't where you are anymore. Meeting new people at your exact stage feels impossible.</p>
+        </div>
+        <div class="problem-c">
+          <div class="prob-icon">🏙️</div>
+          <h3>New City, Zero Network</h3>
+          <p>Moved for college or work? Starting from zero socially is exhausting, lonely, and slow.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section how-sec">
+    <div class="section-inner">
+      <p class="sec-tag">How Parallel Works</p>
+      <h2 class="sec-h">Four steps to your <em>aligned</em> circle.</h2>
+      <div class="steps4">
+        <div class="step-c">
+          <div class="step-num">1</div>
+          <h3>Set Life Stage</h3>
+          <p>Student or corporate professional — tell us exactly where you are right now.</p>
+        </div>
+        <div class="step-c">
+          <div class="step-num">2</div>
+          <h3>Add Interests</h3>
+          <p>Hobbies, energy style, goals. Build the real you — not a curated highlight reel.</p>
+        </div>
+        <div class="step-c">
+          <div class="step-num">3</div>
+          <h3>Smart Swipe Feed</h3>
+          <p>Daily matches with real compatibility scores. City, stage, interests — all intelligently weighted.</p>
+        </div>
+        <div class="step-c">
+          <div class="step-num">4</div>
+          <h3>Deep Conversations</h3>
+          <p>Intent-based chat prompts encourage real depth. Not just "hey" — actual connection.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOR WHO -->
+  <section class="section" style="background:var(--bg)">
+    <div class="section-inner">
+      <p class="sec-tag">Who It's For</p>
+      <h2 class="sec-h">If you've outgrown your old circle — <em>this is for you.</em></h2>
+      <div class="who-grid">
+        <div class="who-c">
+          <div class="who-emoji">🎓</div>
+          <div>
+            <h3>University Students</h3>
+            <p>Preparing for CAT, UPSC, or exploring career paths? Connect with peers at the same stage — study partners, college fest buddies, mentors, and like-minded friends beyond your hostel floor.</p>
+          </div>
+        </div>
+        <div class="who-c">
+          <div class="who-emoji">💼</div>
+          <div>
+            <h3>Corporate Professionals</h3>
+            <p>New city, no office friends, isolated remote lifestyle? Build the social and growth circle you actually want — accountability partners, café work buddies, weekend adventure crew.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="section price-sec">
+    <div class="section-inner">
+      <p class="sec-tag">Simple Pricing</p>
+      <h2 class="sec-h">Start free. Go deeper <em>when you're ready.</em></h2>
+      <div class="price-grid">
+        <div class="price-c">
+          <p class="price-tier">FREE FOREVER</p>
+          <div class="price-amt">₹0</div>
+          <p class="price-period">No credit card needed</p>
+          <ul class="price-ul">
+            <li>5 daily swipes</li>
+            <li>Basic compatibility score</li>
+            <li>Standard messaging</li>
+            <li>Profile creation</li>
+          </ul>
+        </div>
+        <div class="price-c hot">
+          <p class="price-tier">PREMIUM</p>
+          <div class="price-amt">₹199</div>
+          <p class="price-period">per month · billed monthly</p>
+          <ul class="price-ul">
+            <li>Unlimited daily matches</li>
+            <li>Deep compatibility insights</li>
+            <li>Profile visibility boost</li>
+            <li>Advanced goal-based filters</li>
+            <li>Growth circles (small groups)</li>
+            <li>Virtual meetup rooms</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA BAND -->
+  <div class="cta-band">
+    <h2>Your next chapter needs new people.</h2>
+    <p>Join the waitlist. Be first when Parallel launches in your city.</p>
+    <div class="email-form">
+      <input type="email" id="cta-email" placeholder="your@email.com">
+      <button onclick="joinWL()">Claim My Spot</button>
+    </div>
+    <p id="cta-success" style="color:rgba(255,255,255,0.8);font-size:0.82rem;margin-top:1rem;display:none">🎉 You're on the list! We'll reach out before launch.</p>
+  </div>
+
+  <footer>
+    <div class="foot-logo">PARA<span>LLEL</span></div>
+    <p>© 2025 Parallel · Find people moving in your direction.</p>
+    <p>Built with intention.</p>
+  </footer>
+</div>
+
+<!-- APP -->
+<div id="app" class="screen">
+  <nav class="app-nav">
+    <div class="app-logo" onclick="showLanding()">PARA<span>LLEL</span></div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('discover',this)" id="tab-discover">🔍 Discover</button>
+      <button class="tab-btn" onclick="switchTab('matches',this)" id="tab-matches">💛 Matches<span class="badge show" id="badge-matches"></span></button>
+      <button class="tab-btn" onclick="switchTab('messages',this)" id="tab-messages">💬 Messages<span class="badge" id="badge-msgs"></span></button>
+      <button class="tab-btn" onclick="switchTab('profile',this)" id="tab-profile">👤 Me</button>
+    </div>
+  </nav>
+  <div class="app-body">
+
+    <!-- DISCOVER -->
+    <div class="app-tab active" id="tab-discover-body">
+      <div class="feed-head">
+        <h2>People Growing Your Way</h2>
+        <p id="feed-sub">Daily aligned matches in your city</p>
+      </div>
+      <div class="swipe-stack" id="swipe-stack"></div>
+      <div class="swipe-btns" id="swipe-btns">
+        <button class="sw-btn pass" onclick="swipeCard('pass')">✕</button>
+        <button class="sw-btn super" onclick="swipeCard('super')" title="Super Connect">⭐</button>
+        <button class="sw-btn like" onclick="swipeCard('like')">♥</button>
+      </div>
+    </div>
+
+    <!-- MATCHES -->
+    <div class="app-tab" id="tab-matches-body">
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:var(--text);margin-bottom:1.2rem">Your Matches ✨</h2>
+      <div class="matches-grid" id="matches-grid"></div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="app-tab" id="tab-messages-body">
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:var(--text);margin-bottom:1.2rem">Messages</h2>
+      <div class="chat-list" id="chat-list"></div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="app-tab" id="tab-profile-body">
+      <div class="profile-card-big">
+        <div class="profile-big-av" id="profile-av">😊</div>
+        <div class="profile-big-name" id="profile-name">Your Name</div>
+        <div class="profile-big-role" id="profile-role">University Student</div>
+        <div class="profile-stats">
+          <div class="pstat"><div class="pstat-num" id="ps-matches">0</div><div class="pstat-lbl">Matches</div></div>
+          <div class="pstat"><div class="pstat-num">92%</div><div class="pstat-lbl">Avg Score</div></div>
+          <div class="pstat"><div class="pstat-num" id="ps-swipes">0</div><div class="pstat-lbl">Swipes</div></div>
+        </div>
+      </div>
+      <div class="section-block">
+        <h4>🏷 Your Interests</h4>
+        <div class="ptags" id="profile-tags" style="flex-wrap:wrap;display:flex;gap:8px"></div>
+      </div>
+      <div class="section-block">
+        <h4>⚡ Energy Style</h4>
+        <p id="profile-energy" style="font-size:0.85rem;color:var(--muted)">Not set</p>
+      </div>
+      <div class="section-block">
+        <h4>👤 Gender</h4>
+        <p id="profile-gender" style="font-size:0.85rem;color:var(--muted)">Not set</p>
+      </div>
+      <div class="section-block">
+        <h4>📝 Bio</h4>
+        <p id="profile-bio" style="font-size:0.85rem;color:var(--muted);line-height:1.6">Not set</p>
+      </div>
+      <div class="section-block">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <h4 style="margin:0">📦 Recently Relocated</h4>
+            <p style="font-size:0.78rem;color:var(--muted);margin:0.3rem 0 0">Let others know you're new to the city</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="relocated-toggle" onchange="toggleRelocated()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div style="background:#fff3f0;border:1.5px solid rgba(224,80,80,0.2);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1rem;font-size:0.8rem;color:#a03030;line-height:1.6">
+        🛡️ See someone behaving inappropriately? Tap <strong>🚩 Report</strong> on their profile or in chat. We review and act within 24 hours.
+      </div>
+      <button class="ob-btn" style="margin-top:0.5rem;background:rgba(154,136,120,0.12);color:var(--muted);box-shadow:none" onclick="logoutUser()">🚪 Log Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- JS Modules (loaded in dependency order) -->
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/report.js"></script>
+<script src="/js/chat.js"></script>
+<script src="/js/swipe.js"></script>
+</body>
+</html>
