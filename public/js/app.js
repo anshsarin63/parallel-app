@@ -65,19 +65,34 @@ async function loadAppData(excludeEmail = '', filterCity = '') {
   }
 }
 
-// ===== PHOTO UPLOAD =====
+// ===== PHOTO UPLOAD (with compression) =====
 function previewPhoto(input) {
   if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
   const reader = new FileReader();
   reader.onload = e => {
-    user.photo = e.target.result;
-    const img = document.getElementById('photo-preview');
+    const img = new Image();
+    img.onload = () => {
+      // Resize to max 600px on longest side
+      const MAX = 600;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+      else { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.7);
+      user.photo = compressed;
+      const preview = document.getElementById('photo-preview');
+      preview.src = compressed;
+      preview.style.display = 'block';
+      document.getElementById('upload-placeholder').style.display = 'none';
+      document.getElementById('photo-area').style.border = '2.5px solid var(--gold)';
+    };
     img.src = e.target.result;
-    img.style.display = 'block';
-    document.getElementById('upload-placeholder').style.display = 'none';
-    document.getElementById('photo-area').style.border = '2.5px solid var(--gold)';
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
 }
 
 function selectGender(el) {
@@ -285,6 +300,7 @@ async function submitLogin() {
     user.interests = u.interests || [];
     user.energy = u.energy || '';
     user.bio = u.bio || '';
+    user.photo = u.photo || '';
     user.relocated = u.relocated || false;
 
     // Close login modal
@@ -337,6 +353,7 @@ async function launchApp() {
         interests: user.interests,
         energy: user.energy,
         bio: user.bio,
+        photo: user.photo || null,
         relocated: user.relocated || false
       })
     });
@@ -480,6 +497,7 @@ async function restoreSession() {
     user.interests = data.user.interests || savedUser.interests;
     user.energy = data.user.energy || savedUser.energy;
     user.bio = data.user.bio || savedUser.bio;
+    user.photo = data.user.photo || savedUser.photo || '';
     user.relocated = data.user.relocated || false;
   } catch {
     return false;

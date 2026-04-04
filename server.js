@@ -20,7 +20,8 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
 // --- Middleware ---
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- In-memory stores (prototype — not persisted) ---
@@ -80,7 +81,8 @@ function userToProfile(u) {
     email: u.email,
     relocated: u.relocated || false,
     lat: u.lat || null,
-    lng: u.lng || null
+    lng: u.lng || null,
+    photo: u.photo || null
   };
 }
 
@@ -294,7 +296,7 @@ app.post('/api/report', async (req, res) => {
 // POST /api/users — save a new user from onboarding
 app.post('/api/users', async (req, res) => {
   try {
-    const { name, email, password, dob, gender, stage, city, lat, lng, interests, energy, bio } = req.body;
+    const { name, email, password, dob, gender, stage, city, lat, lng, interests, energy, bio, photo } = req.body;
     if (!name || !email) {
       return res.status(400).json({ error: 'Name and email are required' });
     }
@@ -310,7 +312,7 @@ app.post('/api/users', async (req, res) => {
 
     const newUser = await User.create({
       name, email, password, dob, gender, stage, city, lat, lng,
-      interests: interests || [], energy, bio, relocated: false
+      interests: interests || [], energy, bio, photo: photo || null, relocated: false
     });
 
     console.log(`[USER] New signup: ${name} (${email}) — ID: ${newUser._id}`);
