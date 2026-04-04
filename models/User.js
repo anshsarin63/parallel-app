@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
   interests: [String],
   energy: String,
   bio: String,
+  photo: String,
   relocated: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });

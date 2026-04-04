@@ -82,7 +82,10 @@ async function buildDeck() {
     el.innerHTML = `
       <div class="like-stamp">CONNECT ✓</div>
       <div class="pass-stamp">PASS ✕</div>
-      <div class="scard-top"><div class="scard-gradient" style="background:${p.gradient}"></div><div class="scard-stage-badge">${p.stage.toUpperCase()}</div>${p.relocated ? '<div class="scard-relocated-badge">📦 New to City</div>' : ''}<div class="scard-emoji">${p.emoji}</div></div>
+      ${p.photo
+        ? `<div class="scard-top" style="background:url('${p.photo}') center/cover no-repeat;"><div class="scard-gradient" style="background:linear-gradient(to top,rgba(0,0,0,0.45) 0%,transparent 60%)"></div><div class="scard-stage-badge">${p.stage.toUpperCase()}</div>${p.relocated ? '<div class="scard-relocated-badge">📦 New to City</div>' : ''}</div>`
+        : `<div class="scard-top"><div class="scard-gradient" style="background:${p.gradient}"></div><div class="scard-stage-badge">${p.stage.toUpperCase()}</div>${p.relocated ? '<div class="scard-relocated-badge">📦 New to City</div>' : ''}<div class="scard-emoji">${p.emoji}</div></div>`
+      }
       <div class="scard-body">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
           <div>
@@ -92,10 +95,8 @@ async function buildDeck() {
           <button onclick="event.stopPropagation();openReport(${p.id},'${p.name}')" style="background:rgba(154,136,120,0.1);border:1px solid var(--border);border-radius:8px;padding:5px 9px;font-size:0.7rem;color:var(--muted);cursor:pointer;font-family:inherit;transition:all 0.2s" onmouseover="this.style.borderColor='#e05050';this.style.color='#e05050'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">🚩 Report</button>
         </div>
         <div class="scard-compat">
-          <div class="compat-row"><span class="compat-lbl">LIFE STAGE MATCH</span><span class="compat-val">${p.s1}%</span></div>
+          <div class="compat-row"><span class="compat-lbl">COMPATIBILITY SCORE</span><span class="compat-val">${p.s1}%</span></div>
           <div class="compat-track"><div class="compat-fill2" style="width:${p.s1}%"></div></div>
-          <div class="compat-row" style="margin-top:8px"><span class="compat-lbl">OVERALL COMPATIBILITY</span><span class="compat-val">${p.s2}%</span></div>
-          <div class="compat-track"><div class="compat-fill2" style="width:${p.s2}%"></div></div>
         </div>
         <div class="scard-tags">${p.tags.map(t => `<span class="scard-tag">${t}</span>`).join('')}</div>
         <div class="scard-bio">${p.bio}</div>
