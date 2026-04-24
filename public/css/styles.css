@@ -103,8 +103,8 @@ body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans
 /* PROBLEM */
 .section{padding:6rem 2.5rem;position:relative;z-index:1}
 .section-inner{max-width:1100px;margin:0 auto}
-.sec-tag{font-size:0.7rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;font-weight:600}
-.sec-h{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,3.5vw,3.2rem);font-weight:700;line-height:1.2;margin-bottom:3.5rem;color:var(--text)}
+.sec-tag{font-size:0.7rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;font-weight:600;text-align:center}
+.sec-h{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,3.5vw,3.2rem);font-weight:700;line-height:1.2;margin-bottom:3.5rem;color:var(--text);text-align:center}
 .sec-h em{font-style:italic;color:var(--gold)}
 .cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
 .problem-c{background:#fff;border:1px solid var(--border);border-radius:20px;padding:2rem;transition:all 0.3s;box-shadow:0 2px 12px rgba(192,90,53,0.05)}
@@ -397,5 +397,16 @@ footer p{font-size:0.78rem;color:rgba(255,255,255,0.4)}
   .steps4::before{display:none}
   .fbadge{display:none}
   .nav{padding:1rem 1.2rem}
+  .nav-right{gap:0.5rem}
+  .btn-ghost{padding:0.5rem 0.8rem;font-size:0.75rem}
+  .btn-primary{padding:0.5rem 1rem;font-size:0.75rem}
+  .nav-logo-img{transform:scale(2.2)}
+  .app-logo-img{transform:scale(2.2)}
+  .ob-logo-img{transform:scale(2.2)}
   .section{padding:4rem 1.2rem}
+  footer{flex-direction:column;justify-content:center;text-align:center;gap:2rem}
+  .foot-logo-img{transform:scale(3.5);transform-origin:center;display:block;margin:0 auto}
+  .app-nav{padding:0.8rem 1rem}
+  .tab-bar{gap:0.15rem}
+  .tab-btn{padding:0.4rem 0.6rem;font-size:0.7rem}
 }
