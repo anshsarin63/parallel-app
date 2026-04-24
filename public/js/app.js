@@ -201,7 +201,18 @@ function obNext(step) {
   if (step === 3) {
     const s = document.querySelector('#stage-chips .selected');
     if (!s) { showToast('Pick your life stage 🎯'); return; }
-    user.stage = s.textContent.trim();
+    
+    let stageText = s.textContent.trim();
+    if (stageText.includes('Professional')) {
+      const prof = document.getElementById('ob-profession').value.trim();
+      if (prof) {
+        stageText = `Professional (${prof})`;
+      } else {
+        stageText = 'Professional';
+      }
+    }
+    user.stage = stageText;
+
     const c = document.getElementById('ob-city').value;
     if (!c) { showToast('Waiting for location detection... 📍'); return; }
     user.city = c;
@@ -231,10 +242,25 @@ function selectChip(el, group) {
   } else {
     el.classList.toggle('selected');
   }
+
+  if (group === 'stage') {
+    const profField = document.getElementById('profession-field');
+    if (profField) {
+      if (el.textContent.includes('Professional')) {
+        profField.style.display = 'block';
+      } else {
+        profField.style.display = 'none';
+      }
+    }
+  }
 }
 
 function startOnboarding() {
   document.getElementById('ob-screen').classList.remove('hidden');
+}
+
+function cancelOnboarding() {
+  document.getElementById('ob-screen').classList.add('hidden');
 }
 
 // ===== LOGIN =====
@@ -635,7 +661,7 @@ function startDemoCycle() {
 }
 
 function demoLike() {
-  showToast('Join Parallel to connect! ✨');
+  showToast('Join Cohive to connect! ✨');
   setTimeout(() => startOnboarding(), 600);
 }
 
