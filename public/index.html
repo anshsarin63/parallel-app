@@ -314,7 +314,6 @@
     <nav class="nav">
       <img src="/images/logo.png" alt="Cohive" class="nav-logo-img">
       <div class="nav-right">
-        <button class="btn-ghost" onclick="showLanding()">Home</button>
         <button class="btn-ghost" onclick="openLogin()">Log In</button>
         <button class="btn-primary" onclick="startOnboarding()">Get Started Free</button>
       </div>
@@ -513,14 +512,14 @@
 
     <!-- CTA BAND -->
     <div class="cta-band">
-      <h2>Your next chapter needs new people.</h2>
-      <p>Join the waitlist. Be first when Cohive launches in your city.</p>
+      <h2>Connect beyond the ordinary.</h2>
+      <p>Join the hive.</p>
       <div class="email-form">
         <input type="email" id="cta-email" placeholder="your@email.com">
-        <button onclick="joinWL()">Claim My Spot</button>
+        <button onclick="joinWL()">Add me to Premium</button>
       </div>
       <p id="cta-success" style="color:rgba(255,255,255,0.8);font-size:0.82rem;margin-top:1rem;display:none">🎉 You're
-        on the list! We'll reach out before launch.</p>
+        on the Premium list! We'll reach out before launch.</p>
     </div>
 
     <footer>
@@ -532,7 +531,8 @@
   <!-- APP -->
   <div id="app" class="screen">
     <nav class="app-nav">
-      <img src="/images/logo.png" alt="Cohive" class="app-logo-img" onclick="switchTab('discover', document.getElementById('tab-discover'))">
+      <img src="/images/logo.png" alt="Cohive" class="app-logo-img"
+        onclick="switchTab('discover', document.getElementById('tab-discover'))">
       <div class="tab-bar">
         <button class="tab-btn active" onclick="switchTab('discover',this)" id="tab-discover">🔍 Discover</button>
         <button class="tab-btn" onclick="switchTab('matches',this)" id="tab-matches">💛 Matches<span class="badge show"
