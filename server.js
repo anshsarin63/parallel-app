@@ -5,8 +5,16 @@ const { Server } = require('socket.io');
 const path = require('path');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
+const redis = require('redis');
 const { PROFILES, PROMPTS, AUTO_REPLIES, DEMO_DATA } = require('./data/profiles');
 
+// --- Redis Setup ---
+const redisClient = redis.createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
+redisClient.connect().then(() => console.log('✦ Connected to Redis')).catch(console.error);
 // --- Mongoose Models ---
 const User = require('./models/User');
 const Chat = require('./models/Chat');
@@ -307,7 +315,7 @@ app.post('/api/users', async (req, res) => {
     // Check for duplicate email
     const existing = await User.findOne({ email });
     if (existing) {
-      return res.json({ success: true, message: 'User already exists', userId: existing._id });
+      return res.status(400).json({ error: 'An account with this email already exists. Please log in.' });
     }
 
     const newUser = await User.create({
@@ -344,6 +352,82 @@ app.patch('/api/users/update', async (req, res) => {
     res.json({ success: true, message: 'User updated' });
   } catch (err) {
     console.error('[API] Error updating user:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/auth/send-code — generates and emails a 6-digit OTP
+app.post('/api/auth/send-code', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email is required' });
+
+    // Check if user already exists
+    const existing = await User.findOne({ email }).lean();
+    if (existing) return res.status(400).json({ error: 'An account with this email already exists. Try logging in!' });
+
+    // Generate 6 digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store in Redis with 15 mins (900s) expiry
+    await redisClient.setEx(`otp:${email}`, 900, code);
+
+    // Send Email
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.REPORT_EMAIL_USER || 'customersupport.parallel@gmail.com',
+        pass: process.env.REPORT_EMAIL_PASS || ''
+      }
+    });
+
+    const mailOptions = {
+      from: `"CoHive" <${process.env.REPORT_EMAIL_USER || 'customersupport.parallel@gmail.com'}>`,
+      to: email,
+      subject: 'Your CoHive Verification Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
+          <h2 style="color: #c4522a;">Welcome to CoHive!</h2>
+          <p>Please use the verification code below to complete your sign-up process. This code will expire in 15 minutes.</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; text-align: center; margin: 30px 0; padding: 20px; background: #fdf7f0; color: #333; border-radius: 8px;">
+            ${code}
+          </div>
+          <p style="color: #888; font-size: 12px; margin-top: 40px; text-align: center;">If you didn't request this, you can safely ignore this email.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[AUTH] Sent verification code to ${email}`);
+    res.json({ success: true, message: 'Verification code sent' });
+
+  } catch (err) {
+    console.error('[API] Error sending verification code:', err);
+    res.status(500).json({ error: 'Failed to send verification email. Please try again.' });
+  }
+});
+
+// POST /api/auth/verify-code — validates the OTP
+app.post('/api/auth/verify-code', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ error: 'Email and code are required' });
+
+    const storedCode = await redisClient.get(`otp:${email}`);
+    if (!storedCode) {
+      return res.status(400).json({ error: 'Verification code expired or not found. Please resend.' });
+    }
+
+    if (storedCode === code.trim()) {
+      // Code is valid, remove it so it can't be reused
+      await redisClient.del(`otp:${email}`);
+      console.log(`[AUTH] Verified code for ${email}`);
+      return res.json({ success: true, message: 'Email verified' });
+    } else {
+      return res.status(400).json({ error: 'Incorrect verification code.' });
+    }
+  } catch (err) {
+    console.error('[API] Error verifying code:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

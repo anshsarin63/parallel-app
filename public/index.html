@@ -12,6 +12,7 @@
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
 
 <body>
@@ -146,7 +147,31 @@
         <div class="ob-label">CREATE A PASSWORD</div>
         <input class="ob-input" id="ob-password" type="password" placeholder="At least 6 characters">
       </div>
-      <button class="ob-btn" onclick="obNext(1)">Continue →</button>
+      <button class="ob-btn" id="ob-btn-1" onclick="obNext(1)">Continue →</button>
+    </div>
+
+    <!-- STEP 1.5: Email Verification -->
+    <div class="ob-step" id="ob-verify">
+      <div class="ob-progress">
+        <div class="ob-dot done"></div>
+        <div class="ob-dot"></div>
+        <div class="ob-dot"></div>
+        <div class="ob-dot"></div>
+        <div class="ob-dot"></div>
+        <div class="ob-dot"></div>
+      </div>
+      <h2 class="ob-h">Verify your email</h2>
+      <p class="ob-sub">We sent a 6-digit code to <b id="verify-email-display">your email</b>.</p>
+      
+      <div class="ob-field" style="margin-top: 2rem;">
+        <div class="ob-label">ENTER CODE</div>
+        <input class="ob-input" id="ob-verify-code" type="text" placeholder="------" maxlength="6" style="text-align:center; font-size: 1.5rem; letter-spacing: 0.5rem; font-weight: bold;">
+      </div>
+      
+      <button class="ob-btn" id="ob-btn-verify" onclick="verifyEmailCode()" style="margin-top: 2rem;">Verify Code</button>
+      <div style="text-align: center; margin-top: 1.5rem;">
+        <button id="resend-btn" onclick="resendVerificationCode()" class="btn-ghost" style="border:none; padding:0; font-size:0.8rem;">Resend Code</button>
+      </div>
     </div>
 
     <!-- STEP 2: Photo + Birthday + Gender -->
@@ -169,6 +194,7 @@
         </div>
       </div>
       <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="previewPhoto(this)">
+      <div id="photo-error" style="display:none; color:#c04040; font-size:0.8rem; background:#fff3f0; padding:0.5rem; border-radius:8px; margin-bottom:1rem; text-align:center; border:1px solid rgba(224,80,80,0.2);">⚠️ No human face detected. Please upload a real photo.</div>
       <div class="ob-field">
         <div class="ob-label">DATE OF BIRTH</div>
         <input class="ob-input" id="ob-dob" type="date" max="2006-12-31">
@@ -216,6 +242,10 @@
           <button id="location-retry-btn" onclick="detectLocation()"
             style="display:none;margin-top:0.6rem;background:var(--rust);color:#fff;border:none;border-radius:10px;padding:0.5rem 1.2rem;font-size:0.8rem;cursor:pointer;font-family:inherit">📍
             Retry Location</button>
+        </div>
+        <div id="manual-location-container" style="display:none; margin-top:1rem;">
+          <input class="ob-input" id="manual-city" type="text" placeholder="Enter your city (e.g. Mumbai, NY)">
+          <button onclick="saveManualLocation()" style="margin-top:0.6rem;background:var(--rust);color:#fff;border:none;border-radius:10px;padding:0.5rem 1.2rem;font-size:0.8rem;cursor:pointer;font-family:inherit">Save City</button>
         </div>
         <input type="hidden" id="ob-city" value="">
       </div>
@@ -487,7 +517,7 @@
             <div class="price-amt">₹0</div>
             <p class="price-period">No credit card needed</p>
             <ul class="price-ul">
-              <li>5 daily swipes</li>
+              <li>Unlimited daily swipes</li>
               <li>Basic compatibility score</li>
               <li>Standard messaging</li>
               <li>Profile creation</li>
