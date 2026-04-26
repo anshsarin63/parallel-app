@@ -15,6 +15,24 @@ let swipeCount = 0;
 let currentChatId = null;
 let chatHistories = {};
 let socket = null;
+let faceModelsLoaded = false;
+
+// Load face-api models asynchronously
+async function loadFaceModels() {
+  try {
+    if (typeof faceapi === 'undefined') {
+      // face-api.js is loading asynchronously, wait and try again
+      setTimeout(loadFaceModels, 100);
+      return;
+    }
+    await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+    faceModelsLoaded = true;
+    console.log('[FaceAPI] Models loaded successfully.');
+  } catch (err) {
+    console.error('[FaceAPI] Failed to load models:', err);
+  }
+}
+loadFaceModels();
 
 // ===== FETCH DATA FROM BACKEND =====
 // Generic auto-replies for registered users
@@ -72,7 +90,26 @@ function previewPhoto(input) {
   const reader = new FileReader();
   reader.onload = e => {
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
+      const errorEl = document.getElementById('photo-error');
+      if (errorEl) errorEl.style.display = 'none';
+
+      // Verify a human face is present
+      if (faceModelsLoaded) {
+        document.getElementById('upload-placeholder').innerHTML = '<div class="upload-hint">Scanning face...</div>';
+        try {
+          const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions());
+          if (detections.length === 0) {
+            if (errorEl) errorEl.style.display = 'block';
+            input.value = ''; // Clear file input
+            document.getElementById('upload-placeholder').innerHTML = '<div class="upload-icon">📷</div><div class="upload-hint">Tap to add<br>your photo</div>';
+            return;
+          }
+        } catch (err) {
+          console.error('[FaceAPI] Detection failed:', err);
+        }
+      }
+
       // Resize to max 600px on longest side
       const MAX = 600;
       let w = img.width, h = img.height;
@@ -110,17 +147,20 @@ async function detectLocation() {
   const retryBtn = document.getElementById('location-retry-btn');
   const spinnerEl = document.getElementById('location-spinner');
   const hiddenInput = document.getElementById('ob-city');
+  const manualContainer = document.getElementById('manual-location-container');
 
   // Reset UI
   statusEl.style.display = 'block';
   statusEl.innerHTML = '<span id="location-spinner" style="display:inline-block;animation:spin 1s linear infinite">📍</span> Detecting your location...';
   resultEl.style.display = 'none';
   retryBtn.style.display = 'none';
+  manualContainer.style.display = 'none';
   locationDetected = false;
 
   if (!navigator.geolocation) {
     statusEl.innerHTML = '⚠️ Geolocation is not supported by your browser.';
     retryBtn.style.display = 'inline-block';
+    manualContainer.style.display = 'block';
     return;
   }
 
@@ -153,25 +193,58 @@ async function detectLocation() {
         resultEl.style.display = 'block';
         resultEl.innerHTML = `📍 <span style="color:var(--gold)">${cityDisplay}</span>`;
         retryBtn.style.display = 'none';
+        manualContainer.style.display = 'none';
 
         showToast(`📍 Location detected: ${city}`);
       } catch (err) {
         console.error('Reverse geocoding failed:', err);
-        statusEl.innerHTML = '⚠️ Could not determine your city. Please try again.';
+        statusEl.innerHTML = '⚠️ Could not determine your city. Please try again or enter manually.';
         retryBtn.style.display = 'inline-block';
+        manualContainer.style.display = 'block';
       }
     },
     (error) => {
       console.error('Geolocation error:', error);
-      let msg = '⚠️ Could not detect your location.';
-      if (error.code === 1) msg = '⚠️ Location permission denied. Please allow location access and retry.';
-      if (error.code === 2) msg = '⚠️ Location unavailable. Please try again.';
-      if (error.code === 3) msg = '⚠️ Location detection timed out. Please retry.';
+      let msg = '⚠️ Could not detect your location. Please enter it manually.';
+      if (error.code === 1) msg = '⚠️ Location permission denied. Please enter manually.';
+      if (error.code === 2) msg = '⚠️ Location unavailable. Please enter manually.';
+      if (error.code === 3) msg = '⚠️ Location detection timed out. Please enter manually.';
       statusEl.innerHTML = msg;
       retryBtn.style.display = 'inline-block';
+      manualContainer.style.display = 'block';
     },
     { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
   );
+}
+
+function saveManualLocation() {
+  const manualCity = document.getElementById('manual-city').value.trim();
+  if (!manualCity) {
+    showToast('Please enter your city name 🌆');
+    return;
+  }
+  
+  const hiddenInput = document.getElementById('ob-city');
+  const statusEl = document.getElementById('location-status');
+  const resultEl = document.getElementById('location-result');
+  const manualContainer = document.getElementById('manual-location-container');
+  const retryBtn = document.getElementById('location-retry-btn');
+
+  hiddenInput.value = manualCity;
+  user.city = manualCity;
+  // Default lat/lng to roughly center of India/world if manual to prevent null errors later
+  user.lat = 0; 
+  user.lng = 0; 
+  locationDetected = true;
+
+  statusEl.style.display = 'none';
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = `📍 <span style="color:var(--gold)">${manualCity}</span> (Manual)`;
+  retryBtn.style.display = 'inline-block';
+  retryBtn.innerHTML = '📍 Edit/Retry Location';
+  manualContainer.style.display = 'none';
+
+  showToast(`📍 Location set manually: ${manualCity}`);
 }
 
 // ===== ONBOARDING =====
@@ -183,9 +256,40 @@ function obNext(step) {
     if (!e || !e.includes('@')) { showToast('Enter a valid email 📧'); return; }
     const p = document.getElementById('ob-password').value;
     if (!p || p.length < 6) { showToast('Password must be at least 6 characters 🔒'); return; }
-    user.name = n; user.email = e; user.password = p;
-    document.getElementById('welcome-name').textContent = n;
+    
+    const btn = document.getElementById('ob-btn-1');
+    btn.innerHTML = 'Sending Code...';
+    btn.disabled = true;
+
+    fetch('/api/auth/send-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: e })
+    })
+    .then(res => res.json())
+    .then(data => {
+      btn.innerHTML = 'Continue →';
+      btn.disabled = false;
+      if (data.error) {
+        showToast(data.error, 'error');
+        return;
+      }
+      user.name = n; user.email = e; user.password = p;
+      document.getElementById('welcome-name').textContent = n;
+      document.getElementById('verify-email-display').textContent = e;
+      document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+      document.getElementById('ob-verify').classList.add('active');
+      startResendTimer();
+    })
+    .catch(err => {
+      console.error(err);
+      btn.innerHTML = 'Continue →';
+      btn.disabled = false;
+      showToast('Server error. Please try again.', 'error');
+    });
+    return; // Don't auto-proceed
   }
+
   if (step === 2) {
     const dob = document.getElementById('ob-dob').value;
     if (!dob) { showToast('Add your date of birth 🎂'); return; }
@@ -233,6 +337,99 @@ function obNext(step) {
   }
   document.getElementById('ob' + step).classList.remove('active');
   document.getElementById('ob' + (step + 1)).classList.add('active');
+}
+
+let resendInterval;
+function startResendTimer() {
+  const resendBtn = document.getElementById('resend-btn');
+  if (!resendBtn) return;
+  
+  resendBtn.disabled = true;
+  resendBtn.style.opacity = '0.5';
+  resendBtn.style.cursor = 'not-allowed';
+  
+  let timeLeft = 30;
+  resendBtn.innerHTML = `Resend Code (${timeLeft}s)`;
+  
+  clearInterval(resendInterval);
+  resendInterval = setInterval(() => {
+    timeLeft--;
+    if (timeLeft <= 0) {
+      clearInterval(resendInterval);
+      resendBtn.disabled = false;
+      resendBtn.style.opacity = '1';
+      resendBtn.style.cursor = 'pointer';
+      resendBtn.innerHTML = 'Resend Code';
+    } else {
+      resendBtn.innerHTML = `Resend Code (${timeLeft}s)`;
+    }
+  }, 1000);
+}
+
+async function verifyEmailCode() {
+  const code = document.getElementById('ob-verify-code').value.trim();
+  if (!code || code.length !== 6) {
+    showToast('Please enter the 6-digit code', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('ob-btn-verify');
+  btn.innerHTML = 'Verifying...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/auth/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email, code })
+    });
+    const data = await res.json();
+    btn.innerHTML = 'Verify Code';
+    btn.disabled = false;
+
+    if (data.error) {
+      showToast(data.error, 'error');
+      return;
+    }
+    
+    // Success! Proceed to Step 2
+    document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+    document.getElementById('ob2').classList.add('active');
+    showToast('Email verified successfully! ✅');
+  } catch (err) {
+    console.error(err);
+    btn.innerHTML = 'Verify Code';
+    btn.disabled = false;
+    showToast('Server error. Please try again.', 'error');
+  }
+}
+
+async function resendVerificationCode() {
+  if (!user.email) return;
+  showToast('Resending code...');
+  
+  const resendBtn = document.getElementById('resend-btn');
+  resendBtn.disabled = true;
+
+  try {
+    const res = await fetch('/api/auth/send-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email })
+    });
+    const data = await res.json();
+    if (data.error) {
+      showToast(data.error, 'error');
+      resendBtn.disabled = false;
+    } else {
+      showToast('New code sent to your email! 📧');
+      startResendTimer();
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to resend code.', 'error');
+    resendBtn.disabled = false;
+  }
 }
 
 function selectChip(el, group) {
@@ -755,5 +952,43 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!restored) {
     // No session — load data for landing page demo
     await loadAppData();
+  }
+});
+
+// ===== PRIVACY & SCREENSHOT MITIGATIONS =====
+const appContainer = document.getElementById('app');
+
+// 1. Obscure screen when window loses focus (e.g. Snipping tool active)
+window.addEventListener('blur', () => {
+  if (appContainer.classList.contains('active')) {
+    appContainer.classList.add('obscured');
+  }
+});
+
+window.addEventListener('focus', () => {
+  appContainer.classList.remove('obscured');
+});
+
+// 2. Prevent keyboard shortcuts commonly used for screenshots
+document.addEventListener('keydown', (e) => {
+  // Prevent PrintScreen or Mac's Cmd+Shift+S / Cmd+Shift+3 / Cmd+Shift+4
+  if (e.key === 'PrintScreen' || (e.metaKey && e.shiftKey)) {
+    if (appContainer.classList.contains('active')) {
+      appContainer.classList.add('obscured');
+      showToast('⚠️ Screenshots are disabled for privacy.', 'error');
+      navigator.clipboard.writeText(''); // Attempt to clear clipboard
+      
+      // Auto-remove obscure after 3 seconds
+      setTimeout(() => {
+        appContainer.classList.remove('obscured');
+      }, 3000);
+    }
+  }
+});
+
+// 3. Prevent right-clicking on images/content inside the app to save them
+document.addEventListener('contextmenu', (e) => {
+  if (appContainer.classList.contains('active')) {
+    e.preventDefault();
   }
 });
