@@ -217,34 +217,71 @@ async function detectLocation() {
   );
 }
 
-function saveManualLocation() {
-  const manualCity = document.getElementById('manual-city').value.trim();
-  if (!manualCity) {
-    showToast('Please enter your city name 🌆');
+let citySearchTimeout;
+async function searchCity(query) {
+  const resultsContainer = document.getElementById('city-search-results');
+  if (!query || query.trim().length < 2) {
+    resultsContainer.style.display = 'none';
     return;
   }
   
+  clearTimeout(citySearchTimeout);
+  citySearchTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`);
+      const data = await res.json();
+      
+      if (!data.results || data.results.length === 0) {
+        resultsContainer.innerHTML = '<div class="city-search-result-item"><span>No results found</span></div>';
+        resultsContainer.style.display = 'block';
+        return;
+      }
+      
+      resultsContainer.innerHTML = data.results.map(city => {
+        const parts = [city.admin1, city.country].filter(Boolean).join(', ');
+        const displaySub = parts ? `<span>${parts}</span>` : '';
+        const cityData = encodeURIComponent(JSON.stringify(city));
+        return `<div class="city-search-result-item" onclick="selectCity('${cityData}')">
+          <strong>${city.name}</strong><br>${displaySub}
+        </div>`;
+      }).join('');
+      
+      resultsContainer.style.display = 'block';
+    } catch (err) {
+      console.error('City search error:', err);
+    }
+  }, 300);
+}
+
+function selectCity(cityDataEnc) {
+  const city = JSON.parse(decodeURIComponent(cityDataEnc));
   const hiddenInput = document.getElementById('ob-city');
   const statusEl = document.getElementById('location-status');
   const resultEl = document.getElementById('location-result');
   const manualContainer = document.getElementById('manual-location-container');
   const retryBtn = document.getElementById('location-retry-btn');
+  const inputEl = document.getElementById('manual-city');
+  const resultsContainer = document.getElementById('city-search-results');
 
-  hiddenInput.value = manualCity;
-  user.city = manualCity;
-  // Default lat/lng to roughly center of India/world if manual to prevent null errors later
-  user.lat = 0; 
-  user.lng = 0; 
+  const cityDisplay = city.name;
+  
+  hiddenInput.value = cityDisplay;
+  user.city = cityDisplay;
+  user.lat = city.latitude;
+  user.lng = city.longitude;
   locationDetected = true;
+
+  inputEl.value = '';
+  resultsContainer.style.display = 'none';
 
   statusEl.style.display = 'none';
   resultEl.style.display = 'block';
-  resultEl.innerHTML = `📍 <span style="color:var(--gold)">${manualCity}</span> (Manual)`;
+  resultEl.innerHTML = `📍 <span style="color:var(--gold)">${cityDisplay}</span> (Selected)`;
   retryBtn.style.display = 'inline-block';
   retryBtn.innerHTML = '📍 Edit/Retry Location';
   manualContainer.style.display = 'none';
 
-  showToast(`📍 Location set manually: ${manualCity}`);
+  showToast(`📍 Location set: ${cityDisplay}`);
 }
 
 // ===== ONBOARDING =====
@@ -291,6 +328,7 @@ function obNext(step) {
   }
 
   if (step === 2) {
+    if (!user.photo) { showToast('Please add your profile photo 📷'); return; }
     const dob = document.getElementById('ob-dob').value;
     if (!dob) { showToast('Add your date of birth 🎂'); return; }
     if (!user.gender) { showToast('Select your gender 👤'); return; }
@@ -308,18 +346,20 @@ function obNext(step) {
     
     let stageText = s.textContent.trim();
     if (stageText.includes('Professional')) {
-      const prof = document.getElementById('ob-profession').value.trim();
-      if (prof) {
-        stageText = `Professional (${prof})`;
-      } else {
-        stageText = 'Professional';
-      }
+      const prof = document.getElementById('ob-profession').value;
+      if (!prof) { showToast('Please select your profession 💼'); return; }
+      stageText = `Professional (${prof})`;
+    } else if (stageText.includes('Student')) {
+      const studentType = document.getElementById('ob-student-type').value;
+      if (!studentType) { showToast('Please select your student type 🎓'); return; }
+      stageText = `University Student (${studentType})`;
     }
     user.stage = stageText;
 
     const c = document.getElementById('ob-city').value;
     if (!c) { showToast('Waiting for location detection... 📍'); return; }
     user.city = c;
+    user.relocated = document.getElementById('ob-relocated').checked;
   }
   if (step === 4) {
     const sel = [...document.querySelectorAll('#interest-chips .selected')];
@@ -442,11 +482,17 @@ function selectChip(el, group) {
 
   if (group === 'stage') {
     const profField = document.getElementById('profession-field');
-    if (profField) {
+    const studentField = document.getElementById('student-field');
+    if (profField && studentField) {
       if (el.textContent.includes('Professional')) {
         profField.style.display = 'block';
+        studentField.style.display = 'none';
+      } else if (el.textContent.includes('Student')) {
+        studentField.style.display = 'block';
+        profField.style.display = 'none';
       } else {
         profField.style.display = 'none';
+        studentField.style.display = 'none';
       }
     }
   }

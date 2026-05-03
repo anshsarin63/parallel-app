@@ -231,9 +231,37 @@
         <div class="chip" onclick="selectChip(this,'stage')">🎓 University Student</div>
         <div class="chip" onclick="selectChip(this,'stage')">💼 Professional</div>
       </div>
+      <div class="ob-field" id="student-field" style="display:none; margin-top:1.5rem">
+        <div class="ob-label">STUDENT TYPE</div>
+        <select class="ob-input" id="ob-student-type">
+          <option value="" disabled selected>Select student type</option>
+          <option value="Bachelor/ Undergraduate student">Bachelor/ Undergraduate student</option>
+          <option value="Post grad/ Graduate student">Post grad/ Graduate student</option>
+          <option value="Preparing for entrance exams">Preparing for entrance exams</option>
+        </select>
+      </div>
       <div class="ob-field" id="profession-field" style="display:none; margin-top:1.5rem">
         <div class="ob-label">YOUR PROFESSION</div>
-        <input class="ob-input" id="ob-profession" type="text" placeholder="e.g. Designer, Software Engineer...">
+        <select class="ob-input" id="ob-profession">
+          <option value="" disabled selected>Select profession</option>
+          <option value="Technology">Technology</option>
+          <option value="Business">Business</option>
+          <option value="Banking">Banking</option>
+          <option value="Intern">Intern</option>
+          <option value="Actor/ Model">Actor/ Model</option>
+          <option value="Army/Military">Army/Military</option>
+          <option value="Architect">Architect</option>
+          <option value="Healthcare">Healthcare</option>
+          <option value="Aviation">Aviation</option>
+          <option value="Entrepreneur/ Influencer">Entrepreneur/ Influencer</option>
+          <option value="Customer Service">Customer Service</option>
+          <option value="Education/ Professor">Education/ Professor</option>
+          <option value="Transportation">Transportation</option>
+          <option value="Legal/ Government">Legal/ Government</option>
+          <option value="Artist">Artist</option>
+          <option value="Hospitality/ Travel">Hospitality/ Travel</option>
+          <option value="Other">Other</option>
+        </select>
       </div>
       <div class="ob-field" style="margin-top:1.5rem">
         <div class="ob-label">YOUR LOCATION</div>
@@ -248,13 +276,23 @@
             style="display:none;margin-top:0.6rem;background:var(--rust);color:#fff;border:none;border-radius:10px;padding:0.5rem 1.2rem;font-size:0.8rem;cursor:pointer;font-family:inherit">📍
             Retry Location</button>
         </div>
-        <div id="manual-location-container" style="display:none; margin-top:1rem;">
-          <input class="ob-input" id="manual-city" type="text" placeholder="Enter your city (e.g. Mumbai, NY)">
-          <button onclick="saveManualLocation()"
-            style="margin-top:0.6rem;background:var(--rust);color:#fff;border:none;border-radius:10px;padding:0.5rem 1.2rem;font-size:0.8rem;cursor:pointer;font-family:inherit">Save
-            City</button>
+        <div id="manual-location-container" style="display:none; margin-top:1rem; position:relative;">
+          <input class="ob-input" id="manual-city" type="text" placeholder="Search your city (e.g. Mumbai, NY)" oninput="searchCity(this.value)" autocomplete="off">
+          <div id="city-search-results" style="display:none; position:absolute; top:calc(100% + 5px); left:0; right:0; background:var(--bg); border:1px solid var(--border); border-radius:10px; max-height:200px; overflow-y:auto; z-index:10; box-shadow:0 6px 16px rgba(0,0,0,0.1); text-align:left;"></div>
         </div>
         <input type="hidden" id="ob-city" value="">
+      </div>
+      <div class="ob-field" style="margin-top:1.5rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:1rem 1.2rem;box-shadow:0 2px 8px rgba(192,90,53,0.05)">
+          <div>
+            <h4 style="margin:0;font-size:0.95rem;color:var(--text);font-family:'Cormorant Garamond',serif;font-weight:700">📦 Recently Relocated?</h4>
+            <p style="font-size:0.75rem;color:var(--muted);margin:0.3rem 0 0">Let others know you're new to the city</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="ob-relocated">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
       <button class="ob-btn" onclick="obNext(3)">Continue →</button>
     </div>
